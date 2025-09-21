@@ -1,0 +1,496 @@
+<?php
+require_once 'config/database.php';
+
+$database = new Database();
+$db = $database->getConnection();
+
+$session = requireAuth($db);
+$settings = getSettings($db);
+
+// Only admin can access operator management
+if ($session['role'] !== 'admin') {
+    setMessage('Access denied. Admin privileges required.', 'error');
+    header('Location: dashboard.php');
+    exit;
+}
+
+$action = $_GET['action'] ?? 'list';
+
+// Handle operator creation
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $action == 'create') {
+    $operator_name = sanitizeInput($_POST['operator_name']);
+    $operator_code = sanitizeInput($_POST['operator_code']);
+    $password = $_POST['password'];
+    $role = sanitizeInput($_POST['role']);
+    
+    $errors = [];
+    if (empty($operator_name)) $errors[] = 'Operator name is required';
+    if (empty($operator_code)) $errors[] = 'Operator code is required';
+    if (empty($password)) $errors[] = 'Password is required';
+    if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters';
+    
+    // Check if operator code already exists
+    $stmt = $db->prepare("SELECT id FROM gate_operators WHERE operator_code = ?");
+    $stmt->execute([$operator_code]);
+    if ($stmt->fetch()) {
+        $errors[] = 'Operator code already exists';
+    }
+    
+    if (empty($errors)) {
+        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        
+        $stmt = $db->prepare("INSERT INTO gate_operators (operator_name, operator_code, password_hash, role) VALUES (?, ?, ?, ?)");
+        if ($stmt->execute([$operator_name, $operator_code, $password_hash, $role])) {
+            logActivity($db, $session['operator_id'], 'operator_create', "Created operator: $operator_name", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+            setMessage("Operator $operator_name created successfully", 'success');
+            header('Location: operators.php');
+            exit;
+        } else {
+            $errors[] = 'Failed to create operator';
+        }
+    }
+}
+
+// Handle operator update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $action == 'update') {
+    $operator_id = intval($_POST['operator_id']);
+    $operator_name = sanitizeInput($_POST['operator_name']);
+    $operator_code = sanitizeInput($_POST['operator_code']);
+    $role = sanitizeInput($_POST['role']);
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    $password = $_POST['password'];
+    $update_password = !empty($password);
+    
+    $errors = [];
+    if (empty($operator_name)) $errors[] = 'Operator name is required';
+    if (empty($operator_code)) $errors[] = 'Operator code is required';
+    if ($update_password && strlen($password) < 6) $errors[] = 'Password must be at least 6 characters';
+    
+    // Check if operator code exists for other operators
+    $stmt = $db->prepare("SELECT id FROM gate_operators WHERE operator_code = ? AND id != ?");
+    $stmt->execute([$operator_code, $operator_id]);
+    if ($stmt->fetch()) {
+        $errors[] = 'Operator code already exists';
+    }
+    
+    if (empty($errors)) {
+        if ($update_password) {
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $db->prepare("UPDATE gate_operators SET operator_name = ?, operator_code = ?, password_hash = ?, role = ?, is_active = ? WHERE id = ?");
+            $result = $stmt->execute([$operator_name, $operator_code, $password_hash, $role, $is_active, $operator_id]);
+        } else {
+            $stmt = $db->prepare("UPDATE gate_operators SET operator_name = ?, operator_code = ?, role = ?, is_active = ? WHERE id = ?");
+            $result = $stmt->execute([$operator_name, $operator_code, $role, $is_active, $operator_id]);
+        }
+        
+        if ($result) {
+            logActivity($db, $session['operator_id'], 'operator_update', "Updated operator: $operator_name", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+            setMessage("Operator $operator_name updated successfully", 'success');
+        } else {
+            setMessage('Failed to update operator', 'error');
+        }
+        
+        header('Location: operators.php');
+        exit;
+    }
+}
+
+// Get operator for edit
+if ($action == 'edit') {
+    $operator_id = intval($_GET['id'] ?? 0);
+    $stmt = $db->prepare("SELECT * FROM gate_operators WHERE id = ?");
+    $stmt->execute([$operator_id]);
+    $edit_operator = $stmt->fetch();
+    
+    if (!$edit_operator) {
+        setMessage('Operator not found', 'error');
+        header('Location: operators.php');
+        exit;
+    }
+}
+
+// Get all operators
+$stmt = $db->prepare("SELECT 
+    go.*,
+    COUNT(gl.id) as total_activities,
+    MAX(gl.log_timestamp) as last_activity_time
+FROM gate_operators go
+LEFT JOIN gate_logs gl ON go.id = gl.operator_id
+GROUP BY go.id
+ORDER BY go.created_at DESC");
+$stmt->execute();
+$operators = $stmt->fetchAll();
+
+$message = getMessage();
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($settings['system_name'] ?? 'Gate Management System'); ?> - Operators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '<?php echo $settings['primary_color'] ?? '#2563eb'; ?>',
+                        secondary: '<?php echo $settings['secondary_color'] ?? '#1f2937'; ?>',
+                        accent: '<?php echo $settings['accent_color'] ?? '#10b981'; ?>'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="settings.php" class="text-gray-600 hover:text-gray-900 mr-4">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div class="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-users-cog text-white"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h1 class="text-xl font-semibold text-gray-900">Operator Management</h1>
+                        <p class="text-sm text-gray-500">Manage system operators</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="settings.php" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-cog"></i>
+                        <span class="ml-1">Settings</span>
+                    </a>
+                    <a href="dashboard.php" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-home"></i>
+                        <span class="ml-1">Dashboard</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <?php if ($message): ?>
+            <div class="mb-6 p-4 rounded-lg border <?php 
+                echo $message['type'] === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 
+                    ($message['type'] === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 
+                     'bg-green-50 border-green-200 text-green-700'); ?>">
+                <div class="flex items-center">
+                    <i class="fas <?php 
+                        echo $message['type'] === 'error' ? 'fa-exclamation-circle' : 
+                            ($message['type'] === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle'); 
+                        ?> mr-2"></i>
+                    <?php echo htmlspecialchars($message['message']); ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($action == 'create' || $action == 'edit'): ?>
+            <!-- Create/Edit Form -->
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <?php echo $action == 'create' ? 'Create New Operator' : 'Edit Operator'; ?>
+                        </h3>
+                        <p class="text-sm text-gray-600">
+                            <?php echo $action == 'create' ? 'Add a new system operator' : 'Update operator information'; ?>
+                        </p>
+                    </div>
+                    
+                    <?php if (isset($errors) && !empty($errors)): ?>
+                        <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
+                                <span class="font-medium text-red-700">Please correct the following errors:</span>
+                            </div>
+                            <ul class="list-disc list-inside text-red-600 text-sm">
+                                <?php foreach ($errors as $error): ?>
+                                    <li><?php echo htmlspecialchars($error); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <form method="POST" class="space-y-6">
+                        <?php if ($action == 'edit'): ?>
+                            <input type="hidden" name="operator_id" value="<?php echo $edit_operator['id']; ?>">
+                        <?php endif; ?>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="operator_name" class="block text-sm font-medium text-gray-700">Operator Name *</label>
+                                <input type="text" id="operator_name" name="operator_name" required 
+                                       value="<?php echo htmlspecialchars($action == 'edit' ? $edit_operator['operator_name'] : ($_POST['operator_name'] ?? '')); ?>"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+                                       placeholder="Enter operator name">
+                            </div>
+                            
+                            <div>
+                                <label for="operator_code" class="block text-sm font-medium text-gray-700">Operator Code *</label>
+                                <input type="text" id="operator_code" name="operator_code" required 
+                                       value="<?php echo htmlspecialchars($action == 'edit' ? $edit_operator['operator_code'] : ($_POST['operator_code'] ?? '')); ?>"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+                                       placeholder="Enter unique operator code">
+                            </div>
+                            
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-gray-700">
+                                    Password <?php echo $action == 'create' ? '*' : '(leave blank to keep current)'; ?>
+                                </label>
+                                <input type="password" id="password" name="password" 
+                                       <?php echo $action == 'create' ? 'required' : ''; ?>
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+                                       placeholder="Enter password (min 6 characters)">
+                            </div>
+                            
+                            <div>
+                                <label for="role" class="block text-sm font-medium text-gray-700">Role *</label>
+                                <select id="role" name="role" required 
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="operator" <?php echo ($action == 'edit' ? $edit_operator['role'] : ($_POST['role'] ?? '')) === 'operator' ? 'selected' : ''; ?>>Operator</option>
+                                    <option value="admin" <?php echo ($action == 'edit' ? $edit_operator['role'] : ($_POST['role'] ?? '')) === 'admin' ? 'selected' : ''; ?>>Admin</option>
+                                </select>
+                            </div>
+                            
+                            <?php if ($action == 'edit'): ?>
+                                <div class="md:col-span-2">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="is_active" name="is_active" 
+                                               <?php echo $edit_operator['is_active'] ? 'checked' : ''; ?>
+                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                        <label for="is_active" class="ml-2 block text-sm text-gray-900">
+                                            Active (operator can login)
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-4">
+                            <a href="operators.php" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                                Cancel
+                            </a>
+                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                                <i class="fas <?php echo $action == 'create' ? 'fa-plus' : 'fa-save'; ?> mr-2"></i>
+                                <?php echo $action == 'create' ? 'Create Operator' : 'Update Operator'; ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        <?php else: ?>
+            <!-- Operators List -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">System Operators</h2>
+                    <p class="text-gray-600">Manage gate system operators and their permissions</p>
+                </div>
+                <a href="operators.php?action=create" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Add Operator
+                </a>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        Operators (<?php echo count($operators); ?> total)
+                    </h3>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operator</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <?php foreach ($operators as $operator): ?>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                <?php echo htmlspecialchars($operator['operator_name']); ?>
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                Code: <?php echo htmlspecialchars($operator['operator_code']); ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full <?php 
+                                            echo $operator['role'] === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'; ?>">
+                                            <?php echo ucfirst($operator['role']); ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full <?php 
+                                            echo $operator['is_active'] ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
+                                            <?php echo $operator['is_active'] ? 'Active' : 'Inactive'; ?>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <?php echo number_format($operator['total_activities']); ?> activities
+                                        <?php if ($operator['last_activity_time']): ?>
+                                            <div class="text-xs text-gray-500">
+                                                Last: <?php echo date('M j, g:i A', strtotime($operator['last_activity_time'])); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <?php if ($operator['last_login']): ?>
+                                            <?php echo date('M j, Y g:i A', strtotime($operator['last_login'])); ?>
+                                        <?php else: ?>
+                                            Never
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-3">
+                                            <a href="operators.php?action=edit&id=<?php echo $operator['id']; ?>" 
+                                               class="text-indigo-600 hover:text-indigo-900">
+                                                <i class="fas fa-edit mr-1"></i>Edit
+                                            </a>
+                                            <?php if ($operator['id'] != $session['operator_id']): ?>
+                                                <button onclick="resetPassword(<?php echo $operator['id']; ?>, '<?php echo htmlspecialchars($operator['operator_name']); ?>')" 
+                                                        class="text-orange-600 hover:text-orange-900">
+                                                    <i class="fas fa-key mr-1"></i>Reset
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Reset Password</h3>
+                    <button onclick="closeResetModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <form id="resetPasswordForm" method="POST" action="reset-operator-password.php">
+                    <input type="hidden" id="reset_operator_id" name="operator_id">
+                    
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-3">
+                            Reset password for operator: <span id="reset_operator_name" class="font-medium"></span>
+                        </p>
+                        
+                        <label for="new_password" class="block text-sm font-medium text-gray-700">New Password</label>
+                        <input type="password" id="new_password" name="new_password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+                               placeholder="Enter new password (min 6 characters)">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" 
+                               placeholder="Confirm new password">
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeResetModal()" 
+                                class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-key mr-2"></i>Reset Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function resetPassword(operatorId, operatorName) {
+            document.getElementById('reset_operator_id').value = operatorId;
+            document.getElementById('reset_operator_name').textContent = operatorName;
+            document.getElementById('new_password').value = '';
+            document.getElementById('confirm_password').value = '';
+            document.getElementById('resetPasswordModal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('resetPasswordModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeResetModal();
+            }
+        });
+
+        // Password confirmation validation
+        document.getElementById('resetPasswordForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('new_password').value;
+            const confirm = document.getElementById('confirm_password').value;
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters long');
+                return;
+            }
+            
+            if (password !== confirm) {
+                e.preventDefault();
+                alert('Passwords do not match');
+                return;
+            }
+            
+            const button = this.querySelector('button[type="submit"]');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Resetting...';
+            button.disabled = true;
+        });
+
+        // Form submission handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form:not(#resetPasswordForm)');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const button = this.querySelector('button[type="submit"]');
+                    if (button) {
+                        const originalText = button.innerHTML;
+                        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                        button.disabled = true;
+                        
+                        setTimeout(() => {
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                        }, 5000);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

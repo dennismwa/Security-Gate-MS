@@ -1,0 +1,14 @@
+[21-Sep-2025 20:10:47 UTC] PHP Fatal error:  Cannot redeclare sanitizeInput() (previously declared in /home/vxjtgclw/security.zuri.co.ke/pre-register.php:166) in /home/vxjtgclw/security.zuri.co.ke/config/database.php on line 35
+[21-Sep-2025 22:22:32 UTC] Failed to log activity: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`vxjtgclw_security`.`activity_logs`, CONSTRAINT `activity_logs_ibfk_1` FOREIGN KEY (`operator_id`) REFERENCES `gate_operators` (`id`) ON DELETE SET NULL)
+[21-Sep-2025 22:24:57 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`vxjtgclw_security`.`card_print_logs`, CONSTRAINT `card_print_logs_ibfk_3` FOREIGN KEY (`printed_by`) REFERENCES `gate_operators` (`id`) ON DELETE RESTRICT) in /home/vxjtgclw/security.zuri.co.ke/print-card.php:40
+Stack trace:
+#0 /home/vxjtgclw/security.zuri.co.ke/print-card.php(40): PDOStatement->execute(Array)
+#1 {main}
+  thrown in /home/vxjtgclw/security.zuri.co.ke/print-card.php on line 40
+[21-Sep-2025 22:25:14 UTC] PHP Warning:  Undefined variable $next_action in /home/vxjtgclw/security.zuri.co.ke/process-scan.php on line 64
+[21-Sep-2025 22:25:14 UTC] Scan processing error: SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'log_type' cannot be null
+[21-Sep-2025 22:25:25 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`vxjtgclw_security`.`card_print_logs`, CONSTRAINT `card_print_logs_ibfk_3` FOREIGN KEY (`printed_by`) REFERENCES `gate_operators` (`id`) ON DELETE RESTRICT) in /home/vxjtgclw/security.zuri.co.ke/print-card.php:40
+Stack trace:
+#0 /home/vxjtgclw/security.zuri.co.ke/print-card.php(40): PDOStatement->execute(Array)
+#1 {main}
+  thrown in /home/vxjtgclw/security.zuri.co.ke/print-card.php on line 40
