@@ -75,58 +75,87 @@ $message = getMessage();
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                flex-direction: column !important;
+            }
+            
+            .mobile-full {
+                width: 100% !important;
+            }
+            
+            .mobile-text-sm {
+                font-size: 0.875rem !important;
+            }
+            
+            .mobile-hidden {
+                display: none !important;
+            }
+            
+            .mobile-scroll {
+                overflow-x: auto !important;
+            }
+        }
+        
+        /* Color preview animation */
+        .color-preview {
+            transition: all 0.3s ease;
+        }
+        
+        .color-preview:hover {
+            transform: scale(1.1);
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation -->
+    <!-- Mobile Responsive Navigation -->
     <nav class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="dashboard.php" class="text-gray-600 hover:text-gray-900 mr-4">
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <a href="dashboard.php" class="text-gray-600 hover:text-gray-900">
                         <i class="fas fa-arrow-left"></i>
                     </a>
-                    <div class="h-10 w-10 bg-gray-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-cog text-white"></i>
+                    <div class="h-8 w-8 sm:h-10 sm:w-10 bg-gray-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-cog text-white text-sm sm:text-base"></i>
                     </div>
-                    <div class="ml-3">
-                        <h1 class="text-xl font-semibold text-gray-900">System Settings</h1>
-                        <p class="text-sm text-gray-500">Configure system preferences</p>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-semibold text-gray-900">System Settings</h1>
+                        <p class="text-xs sm:text-sm text-gray-500 hidden sm:block">Configure preferences</p>
                     </div>
                 </div>
                 
-                
-                    
-                    <div class="flex items-center space-x-4">
-    <a href="system-health.php" class="text-blue-600 hover:text-blue-800">
-        <i class="fas fa-heartbeat"></i>
-        <span class="ml-1">Health</span>
-    </a>
-    <a href="backup-system.php" class="text-green-600 hover:text-green-800">
-        <i class="fas fa-database"></i>
-        <span class="ml-1">Backup</span>
-    </a>
-    <a href="manage-departments.php" class="text-purple-600 hover:text-purple-800">
-        <i class="fas fa-building"></i>
-        <span class="ml-1">Departments</span>
-    </a>
-    <a href="operators.php" class="text-blue-600 hover:text-blue-800">
-        <i class="fas fa-users-cog"></i>
-        <span class="ml-1">Operators</span>
-    </a>
-    <a href="dashboard.php" class="text-blue-600 hover:text-blue-800">
-        <i class="fas fa-home"></i>
-        <span class="ml-1">Dashboard</span>
-    </a>
-</div>
-                    
+                <div class="flex items-center space-x-2 sm:space-x-4 mobile-scroll">
+                    <a href="system-health.php" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm whitespace-nowrap">
+                        <i class="fas fa-heartbeat"></i>
+                        <span class="ml-1 hidden sm:inline">Health</span>
+                    </a>
+                    <a href="backup-system.php" class="text-green-600 hover:text-green-800 text-xs sm:text-sm whitespace-nowrap">
+                        <i class="fas fa-database"></i>
+                        <span class="ml-1 hidden sm:inline">Backup</span>
+                    </a>
+                    <a href="manage-departments.php" class="text-purple-600 hover:text-purple-800 text-xs sm:text-sm whitespace-nowrap">
+                        <i class="fas fa-building"></i>
+                        <span class="ml-1 hidden sm:inline">Departments</span>
+                    </a>
+                    <a href="operators.php" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm whitespace-nowrap">
+                        <i class="fas fa-users-cog"></i>
+                        <span class="ml-1 hidden sm:inline">Operators</span>
+                    </a>
+                    <a href="dashboard.php" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm whitespace-nowrap">
+                        <i class="fas fa-home"></i>
+                        <span class="ml-1 hidden sm:inline">Dashboard</span>
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-4xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         <?php if ($message): ?>
-            <div class="mb-6 p-4 rounded-lg border <?php 
+            <div class="mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg border text-sm sm:text-base <?php 
                 echo $message['type'] === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 
                     ($message['type'] === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' : 
                      'bg-green-50 border-green-200 text-green-700'); ?>">
@@ -140,24 +169,24 @@ $message = getMessage();
             </div>
         <?php endif; ?>
 
-        <form method="POST" class="space-y-8">
+        <form method="POST" class="space-y-6 sm:space-y-8">
             <!-- General Settings -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">General Settings</h3>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">General Settings</h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div class="md:col-span-2">
                         <label for="system_name" class="block text-sm font-medium text-gray-700">System Name</label>
                         <input type="text" id="system_name" name="system_name" 
                                value="<?php echo htmlspecialchars($settings['system_name'] ?? 'Gate Management System'); ?>"
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                placeholder="Gate Management System">
                     </div>
                     
-                    <div>
-                        <label for="session_timeout" class="block text-sm font-medium text-gray-700">Session Timeout (seconds)</label>
+                    <div class="md:col-span-2">
+                        <label for="session_timeout" class="block text-sm font-medium text-gray-700">Session Timeout</label>
                         <select id="session_timeout" name="session_timeout" 
-                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
                             <option value="1800" <?php echo ($settings['session_timeout'] ?? '3600') == '1800' ? 'selected' : ''; ?>>30 minutes</option>
                             <option value="3600" <?php echo ($settings['session_timeout'] ?? '3600') == '3600' ? 'selected' : ''; ?>>1 hour</option>
                             <option value="7200" <?php echo ($settings['session_timeout'] ?? '3600') == '7200' ? 'selected' : ''; ?>>2 hours</option>
@@ -168,68 +197,77 @@ $message = getMessage();
             </div>
 
             <!-- Theme Settings -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Theme & Colors</h3>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Theme & Colors</h3>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <div>
-                        <label for="primary_color" class="block text-sm font-medium text-gray-700">Primary Color</label>
-                        <div class="mt-1 flex items-center space-x-3">
+                        <label for="primary_color" class="block text-sm font-medium text-gray-700 mb-2">Primary Color</label>
+                        <div class="flex items-center space-x-3">
                             <input type="color" id="primary_color" name="primary_color" 
                                    value="<?php echo $settings['primary_color'] ?? '#2563eb'; ?>"
-                                   class="h-10 w-16 border border-gray-300 rounded cursor-pointer">
-                            <input type="text" 
+                                   class="h-10 w-12 sm:w-16 border border-gray-300 rounded cursor-pointer">
+                            <input type="text" id="primary_color_text"
                                    value="<?php echo $settings['primary_color'] ?? '#2563eb'; ?>"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                    readonly>
                         </div>
                     </div>
                     
                     <div>
-                        <label for="secondary_color" class="block text-sm font-medium text-gray-700">Secondary Color</label>
-                        <div class="mt-1 flex items-center space-x-3">
+                        <label for="secondary_color" class="block text-sm font-medium text-gray-700 mb-2">Secondary Color</label>
+                        <div class="flex items-center space-x-3">
                             <input type="color" id="secondary_color" name="secondary_color" 
                                    value="<?php echo $settings['secondary_color'] ?? '#1f2937'; ?>"
-                                   class="h-10 w-16 border border-gray-300 rounded cursor-pointer">
-                            <input type="text" 
+                                   class="h-10 w-12 sm:w-16 border border-gray-300 rounded cursor-pointer">
+                            <input type="text" id="secondary_color_text"
                                    value="<?php echo $settings['secondary_color'] ?? '#1f2937'; ?>"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                    readonly>
                         </div>
                     </div>
                     
                     <div>
-                        <label for="accent_color" class="block text-sm font-medium text-gray-700">Accent Color</label>
-                        <div class="mt-1 flex items-center space-x-3">
+                        <label for="accent_color" class="block text-sm font-medium text-gray-700 mb-2">Accent Color</label>
+                        <div class="flex items-center space-x-3">
                             <input type="color" id="accent_color" name="accent_color" 
                                    value="<?php echo $settings['accent_color'] ?? '#10b981'; ?>"
-                                   class="h-10 w-16 border border-gray-300 rounded cursor-pointer">
-                            <input type="text" 
+                                   class="h-10 w-12 sm:w-16 border border-gray-300 rounded cursor-pointer">
+                            <input type="text" id="accent_color_text"
                                    value="<?php echo $settings['accent_color'] ?? '#10b981'; ?>"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                    readonly>
                         </div>
                     </div>
                 </div>
                 
-                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p class="text-sm text-gray-600 mb-2">Preview:</p>
-                    <div class="flex space-x-4">
-                        <div id="color_preview_primary" class="w-12 h-12 rounded border-2 border-white shadow" 
-                             style="background-color: <?php echo $settings['primary_color'] ?? '#2563eb'; ?>"></div>
-                        <div id="color_preview_secondary" class="w-12 h-12 rounded border-2 border-white shadow" 
-                             style="background-color: <?php echo $settings['secondary_color'] ?? '#1f2937'; ?>"></div>
-                        <div id="color_preview_accent" class="w-12 h-12 rounded border-2 border-white shadow" 
-                             style="background-color: <?php echo $settings['accent_color'] ?? '#10b981'; ?>"></div>
+                <div class="mt-4 sm:mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm font-medium text-gray-700 mb-3">Color Preview:</p>
+                    <div class="flex flex-wrap gap-3 sm:gap-4">
+                        <div class="flex flex-col items-center">
+                            <div id="color_preview_primary" class="color-preview w-12 h-12 sm:w-16 sm:h-16 rounded-lg border-2 border-white shadow-md cursor-pointer" 
+                                 style="background-color: <?php echo $settings['primary_color'] ?? '#2563eb'; ?>"></div>
+                            <span class="text-xs text-gray-600 mt-1">Primary</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div id="color_preview_secondary" class="color-preview w-12 h-12 sm:w-16 sm:h-16 rounded-lg border-2 border-white shadow-md cursor-pointer" 
+                                 style="background-color: <?php echo $settings['secondary_color'] ?? '#1f2937'; ?>"></div>
+                            <span class="text-xs text-gray-600 mt-1">Secondary</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div id="color_preview_accent" class="color-preview w-12 h-12 sm:w-16 sm:h-16 rounded-lg border-2 border-white shadow-md cursor-pointer" 
+                                 style="background-color: <?php echo $settings['accent_color'] ?? '#10b981'; ?>"></div>
+                            <span class="text-xs text-gray-600 mt-1">Accent</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Email Settings -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Email Notifications</h3>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Email Notifications</h3>
                 
-                <div class="space-y-6">
+                <div class="space-y-4 sm:space-y-6">
                     <div class="flex items-center">
                         <input type="checkbox" id="email_notifications" name="email_notifications" 
                                <?php echo ($settings['email_notifications'] ?? 'false') === 'true' ? 'checked' : ''; ?>
@@ -239,12 +277,12 @@ $message = getMessage();
                         </label>
                     </div>
                     
-                    <div id="smtp_settings" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div id="smtp_settings" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
                             <label for="smtp_host" class="block text-sm font-medium text-gray-700">SMTP Host</label>
                             <input type="text" id="smtp_host" name="smtp_host" 
                                    value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                    placeholder="smtp.gmail.com">
                         </div>
                         
@@ -252,7 +290,7 @@ $message = getMessage();
                             <label for="smtp_port" class="block text-sm font-medium text-gray-700">SMTP Port</label>
                             <input type="number" id="smtp_port" name="smtp_port" 
                                    value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                    placeholder="587">
                         </div>
                         
@@ -260,24 +298,24 @@ $message = getMessage();
                             <label for="smtp_username" class="block text-sm font-medium text-gray-700">SMTP Username</label>
                             <input type="email" id="smtp_username" name="smtp_username" 
                                    value="<?php echo htmlspecialchars($settings['smtp_username'] ?? ''); ?>"
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                    placeholder="your-email@gmail.com">
                         </div>
                         
                         <div>
                             <label for="smtp_password" class="block text-sm font-medium text-gray-700">SMTP Password</label>
                             <input type="password" id="smtp_password" name="smtp_password" 
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base" 
                                    placeholder="Leave blank to keep current password">
                         </div>
                     </div>
                     
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                         <div class="flex">
-                            <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-2"></i>
+                            <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-2 flex-shrink-0"></i>
                             <div class="text-sm text-blue-800">
                                 <p class="font-medium mb-1">Email Configuration Tips:</p>
-                                <ul class="list-disc list-inside space-y-1">
+                                <ul class="list-disc list-inside space-y-1 text-xs sm:text-sm">
                                     <li>For Gmail: Use app passwords instead of your regular password</li>
                                     <li>Common ports: 587 (TLS), 465 (SSL), 25 (unsecured)</li>
                                     <li>Test email functionality after saving settings</li>
@@ -289,8 +327,11 @@ $message = getMessage();
             </div>
 
             <!-- Save Button -->
-            <div class="flex justify-end">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+            <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+                <button type="button" onclick="resetToDefaults()" class="px-4 py-2 sm:px-6 sm:py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors text-sm sm:text-base">
+                    <i class="fas fa-undo mr-2"></i>Reset to Defaults
+                </button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base">
                     <i class="fas fa-save mr-2"></i>Save Settings
                 </button>
             </div>
@@ -299,9 +340,10 @@ $message = getMessage();
 
     <script>
         // Color picker functionality
-        document.querySelectorAll('input[type="color"]').forEach(picker => {
-            const textInput = picker.nextElementSibling;
-            const previewElement = document.getElementById('color_preview_' + picker.name.replace('_color', ''));
+        function setupColorPicker(colorName) {
+            const picker = document.getElementById(colorName + '_color');
+            const textInput = document.getElementById(colorName + '_color_text');
+            const previewElement = document.getElementById('color_preview_' + colorName);
             
             picker.addEventListener('input', function() {
                 textInput.value = this.value;
@@ -309,17 +351,31 @@ $message = getMessage();
                     previewElement.style.backgroundColor = this.value;
                 }
             });
-        });
+            
+            // Make preview clickable to open color picker
+            if (previewElement) {
+                previewElement.addEventListener('click', function() {
+                    picker.click();
+                });
+            }
+        }
+
+        // Setup all color pickers
+        setupColorPicker('primary');
+        setupColorPicker('secondary');
+        setupColorPicker('accent');
 
         // Email notifications toggle
         document.getElementById('email_notifications').addEventListener('change', function() {
             const smtpSettings = document.getElementById('smtp_settings');
+            const inputs = smtpSettings.querySelectorAll('input');
+            
             if (this.checked) {
                 smtpSettings.style.opacity = '1';
-                smtpSettings.querySelectorAll('input').forEach(input => input.disabled = false);
+                inputs.forEach(input => input.disabled = false);
             } else {
                 smtpSettings.style.opacity = '0.5';
-                smtpSettings.querySelectorAll('input').forEach(input => input.disabled = true);
+                inputs.forEach(input => input.disabled = true);
             }
         });
 
@@ -329,11 +385,181 @@ $message = getMessage();
             emailCheckbox.dispatchEvent(new Event('change'));
         });
 
+        // Reset to defaults function
+        function resetToDefaults() {
+            if (confirm('Are you sure you want to reset all settings to default values?')) {
+                // Reset system name
+                document.getElementById('system_name').value = 'Gate Management System';
+                
+                // Reset colors
+                document.getElementById('primary_color').value = '#2563eb';
+                document.getElementById('secondary_color').value = '#1f2937';
+                document.getElementById('accent_color').value = '#10b981';
+                
+                // Reset session timeout
+                document.getElementById('session_timeout').value = '3600';
+                
+                // Reset email settings
+                document.getElementById('email_notifications').checked = false;
+                document.getElementById('smtp_host').value = '';
+                document.getElementById('smtp_port').value = '587';
+                document.getElementById('smtp_username').value = '';
+                document.getElementById('smtp_password').value = '';
+                
+                // Update color previews
+                document.getElementById('primary_color_text').value = '#2563eb';
+                document.getElementById('secondary_color_text').value = '#1f2937';
+                document.getElementById('accent_color_text').value = '#10b981';
+                
+                document.getElementById('color_preview_primary').style.backgroundColor = '#2563eb';
+                document.getElementById('color_preview_secondary').style.backgroundColor = '#1f2937';
+                document.getElementById('color_preview_accent').style.backgroundColor = '#10b981';
+                
+                // Trigger email settings change
+                document.getElementById('email_notifications').dispatchEvent(new Event('change'));
+                
+                showNotification('Settings reset to defaults. Click "Save Settings" to apply changes.', 'info');
+            }
+        }
+
         // Form submission
         document.querySelector('form').addEventListener('submit', function(e) {
             const button = this.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
             button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
             button.disabled = true;
+            
+            // Re-enable after timeout to prevent permanent disable if redirect fails
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 10000);
+        });
+
+        // Show notification function
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-3 sm:p-4 rounded-lg border max-w-xs sm:max-w-sm transform transition-all duration-300 translate-x-full opacity-0 ${
+                type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+                type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+                type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                'bg-blue-50 border-blue-200 text-blue-800'
+            }`;
+            
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${
+                        type === 'success' ? 'fa-check-circle' :
+                        type === 'error' ? 'fa-exclamation-circle' :
+                        type === 'warning' ? 'fa-exclamation-triangle' :
+                        'fa-info-circle'
+                    } mr-2 flex-shrink-0"></i>
+                    <span class="text-sm font-medium">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600 flex-shrink-0">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full', 'opacity-0');
+            }, 100);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.add('translate-x-full', 'opacity-0');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 5000);
+        }
+
+        // Handle form changes
+        let hasChanges = false;
+        const form = document.querySelector('form');
+        const inputs = form.querySelectorAll('input, select, textarea');
+        
+        inputs.forEach(input => {
+            input.addEventListener('change', () => {
+                hasChanges = true;
+            });
+        });
+
+        // Warn about unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Form submission resets changes flag
+        form.addEventListener('submit', () => {
+            hasChanges = false;
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                form.submit();
+            } else if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                resetToDefaults();
+            }
+        });
+
+        // Mobile keyboard handling
+        if (window.innerWidth <= 768) {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                });
+            });
+        }
+
+        // Auto-save draft (optional feature)
+        function saveDraft() {
+            const formData = new FormData(form);
+            const draftData = {};
+            for (let [key, value] of formData.entries()) {
+                draftData[key] = value;
+            }
+            localStorage.setItem('settings_draft', JSON.stringify(draftData));
+        }
+
+        // Auto-save every 30 seconds if there are changes
+        setInterval(() => {
+            if (hasChanges) {
+                saveDraft();
+            }
+        }, 30000);
+
+        // Load draft on page load
+        const savedDraft = localStorage.getItem('settings_draft');
+        if (savedDraft) {
+            try {
+                const draftData = JSON.parse(savedDraft);
+                // Only show draft notification, don't auto-apply
+                showNotification('Unsaved changes detected. They will be preserved as you edit.', 'info');
+            } catch (e) {
+                localStorage.removeItem('settings_draft');
+            }
+        }
+
+        // Clear draft on successful submission
+        form.addEventListener('submit', () => {
+            localStorage.removeItem('settings_draft');
         });
     </script>
 </body>
