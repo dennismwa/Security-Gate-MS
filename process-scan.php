@@ -41,11 +41,11 @@ try {
             $visitor_id = generateUniqueId('VIS');
             $new_qr = generateQRCode($visitor_id . $pre_reg['phone']);
             
-            $stmt = $db->prepare("INSERT INTO visitors (visitor_id, full_name, phone, email, company, vehicle_number, qr_code, is_pre_registered) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+            $stmt = $db->prepare("INSERT INTO visitors (visitor_id, full_name, phone, email, company, vehicle_number, qr_code, is_pre_registered, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW())");
             $stmt->execute([$visitor_id, $pre_reg['full_name'], $pre_reg['phone'], $pre_reg['email'], $pre_reg['company'], $pre_reg['vehicle_number'], $new_qr]);
             
             // Update pre-registration status
-            $stmt = $db->prepare("UPDATE pre_registrations SET status = 'used' WHERE id = ?");
+            $stmt = $db->prepare("UPDATE pre_registrations SET status = 'used', updated_at = NOW() WHERE id = ?");
             $stmt->execute([$pre_reg['id']]);
             
             // Get the new visitor data
@@ -59,13 +59,7 @@ try {
         echo json_encode(['success' => false, 'message' => 'Invalid QR code or visitor not found']);
         exit;
     }
-    // Record the activity
-$stmt = $db->prepare("INSERT INTO gate_logs (visitor_id, log_type, operator_id, purpose_of_visit, host_name, host_department, vehicle_number, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$visitor['visitor_id'], $next_action, $session['id'], $purpose_of_visit, $host_name, $host_department, $visitor['vehicle_number'], $notes]);
-
-// Create notification
-$action_text = $next_action === 'check_in' ? 'checked in' : 'checked out';
-createNotification($db, $next_action, ucfirst(str_replace('_', ' ', $next_action)), "Visitor {$visitor['full_name']} has $action_text", $visitor['visitor_id'], $session['id']);
+    
     // Get last activity to determine next action
     $stmt = $db->prepare("SELECT log_type FROM gate_logs WHERE visitor_id = ? ORDER BY log_timestamp DESC LIMIT 1");
     $stmt->execute([$visitor['visitor_id']]);
@@ -73,12 +67,16 @@ createNotification($db, $next_action, ucfirst(str_replace('_', ' ', $next_action
     
     $next_action = (!$last_log || $last_log['log_type'] == 'check_out') ? 'check_in' : 'check_out';
     
-    // Record the activity
-    $stmt = $db->prepare("INSERT INTO gate_logs (visitor_id, log_type, operator_id, purpose_of_visit, host_name, host_department, vehicle_number, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$visitor['visitor_id'], $next_action, $session['id'], $purpose_of_visit, $host_name, $host_department, $visitor['vehicle_number'], $notes]);
+    // Record the activity with current Kenya time
+    $stmt = $db->prepare("INSERT INTO gate_logs (visitor_id, log_type, operator_id, purpose_of_visit, host_name, host_department, vehicle_number, notes, log_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->execute([$visitor['visitor_id'], $next_action, $session['operator_id'], $purpose_of_visit, $host_name, $host_department, $visitor['vehicle_number'], $notes]);
+    
+    // Create notification
+    $action_text = $next_action === 'check_in' ? 'checked in' : 'checked out';
+    createNotification($db, $next_action, ucfirst(str_replace('_', ' ', $next_action)), "Visitor {$visitor['full_name']} has $action_text", $visitor['visitor_id'], $session['operator_id']);
     
     // Log activity
-    logActivity($db, $session['id'], 'gate_scan', "QR scan $next_action for visitor: {$visitor['full_name']}", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+    logActivity($db, $session['operator_id'], 'gate_scan', "QR scan $next_action for visitor: {$visitor['full_name']}", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
     
     echo json_encode([
         'success' => true,
@@ -91,7 +89,8 @@ createNotification($db, $next_action, ucfirst(str_replace('_', ' ', $next_action
             'vehicle_number' => $visitor['vehicle_number']
         ],
         'message' => ucfirst(str_replace('_', ' ', $next_action)) . ' successful for ' . $visitor['full_name'],
-        'timestamp' => date('Y-m-d H:i:s')
+        'timestamp' => getCurrentKenyaTime('Y-m-d H:i:s'),
+        'kenya_time' => getCurrentKenyaTime('g:i A')
     ]);
     
 } catch (Exception $e) {
