@@ -15,6 +15,10 @@ class Database {
                                 $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            
+            // Set timezone to Kenya (EAT - East Africa Time)
+            $this->conn->exec("SET time_zone = '+03:00'");
+            
         } catch(PDOException $exception) {
             echo "Connection error: " . $exception->getMessage();
         }
@@ -22,6 +26,9 @@ class Database {
         return $this->conn;
     }
 }
+
+// Set PHP timezone to Kenya
+date_default_timezone_set('Africa/Nairobi');
 
 // Global functions
 function generateUniqueId($prefix = '') {
@@ -46,7 +53,7 @@ function validateEmail($email) {
 
 function logActivity($db, $operator_id, $activity_type, $description, $ip_address = null, $user_agent = null) {
     try {
-        $stmt = $db->prepare("INSERT INTO activity_logs (operator_id, activity_type, description, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO activity_logs (operator_id, activity_type, description, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
         $stmt->execute([$operator_id, $activity_type, $description, $ip_address, $user_agent]);
     } catch (Exception $e) {
         error_log("Failed to log activity: " . $e->getMessage());
@@ -95,7 +102,7 @@ function createSession($db, $operator_id) {
     
     // Create new session
     $session_token = bin2hex(random_bytes(32));
-    $stmt = $db->prepare("INSERT INTO operator_sessions (operator_id, session_token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))");
+    $stmt = $db->prepare("INSERT INTO operator_sessions (operator_id, session_token, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR), NOW())");
     $stmt->execute([$operator_id, $session_token]);
     
     $_SESSION['operator_id'] = $operator_id;
@@ -128,7 +135,7 @@ function updateSetting($db, $key, $value) {
     $result = $stmt->execute([$value, $key]);
     
     if ($stmt->rowCount() == 0) {
-        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)");
+        $stmt = $db->prepare("INSERT INTO settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
         $result = $stmt->execute([$key, $value]);
     }
     
@@ -160,10 +167,11 @@ function getMessage() {
     }
     return null;
 }
+
 // Notification functions
 function createNotification($db, $type, $title, $message, $visitor_id = null, $operator_id = null) {
     try {
-        $stmt = $db->prepare("INSERT INTO notifications (type, title, message, visitor_id, operator_id) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO notifications (type, title, message, visitor_id, operator_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
         return $stmt->execute([$type, $title, $message, $visitor_id, $operator_id]);
     } catch (Exception $e) {
         error_log("Failed to create notification: " . $e->getMessage());
@@ -179,5 +187,31 @@ function getUnreadNotificationsCount($db) {
     } catch (Exception $e) {
         return 0;
     }
+}
+
+// Time zone helper functions
+function getCurrentKenyaTime($format = 'Y-m-d H:i:s') {
+    return date($format);
+}
+
+function convertToKenyaTime($timestamp, $format = 'Y-m-d H:i:s') {
+    $dt = new DateTime($timestamp);
+    $dt->setTimezone(new DateTimeZone('Africa/Nairobi'));
+    return $dt->format($format);
+}
+
+function getKenyaDate($format = 'Y-m-d') {
+    return date($format);
+}
+
+function timeAgo($datetime) {
+    $time = time() - strtotime($datetime);
+    
+    if ($time < 60) return 'just now';
+    if ($time < 3600) return floor($time/60) . ' min ago';
+    if ($time < 86400) return floor($time/3600) . ' hrs ago';
+    if ($time < 2592000) return floor($time/86400) . ' days ago';
+    if ($time < 31536000) return floor($time/2592000) . ' months ago';
+    return floor($time/31536000) . ' years ago';
 }
 ?>
