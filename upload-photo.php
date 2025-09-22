@@ -6,7 +6,12 @@ header('Content-Type: application/json');
 $database = new Database();
 $db = $database->getConnection();
 
-$session = requireAuth($db);
+try {
+    $session = requireAuth($db);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => 'Authentication required']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request method']);
@@ -29,7 +34,33 @@ if (!$stmt->fetch()) {
 }
 
 if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
-    echo json_encode(['success' => false, 'message' => 'No valid photo uploaded']);
+    $error_msg = 'No valid photo uploaded';
+    if (isset($_FILES['photo']['error'])) {
+        switch($_FILES['photo']['error']) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                $error_msg = 'File too large';
+                break;
+            case UPLOAD_ERR_PARTIAL:
+                $error_msg = 'File was only partially uploaded';
+                break;
+            case UPLOAD_ERR_NO_FILE:
+                $error_msg = 'No file was uploaded';
+                break;
+            case UPLOAD_ERR_NO_TMP_DIR:
+                $error_msg = 'Missing temporary folder';
+                break;
+            case UPLOAD_ERR_CANT_WRITE:
+                $error_msg = 'Failed to write file to disk';
+                break;
+            case UPLOAD_ERR_EXTENSION:
+                $error_msg = 'File upload stopped by extension';
+                break;
+            default:
+                $error_msg = 'Unknown upload error';
+        }
+    }
+    echo json_encode(['success' => false, 'message' => $error_msg]);
     exit;
 }
 
@@ -37,8 +68,13 @@ $file = $_FILES['photo'];
 $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
 $max_size = 5 * 1024 * 1024; // 5MB
 
+// Get actual mime type
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mime_type = finfo_file($finfo, $file['tmp_name']);
+finfo_close($finfo);
+
 // Validate file type
-if (!in_array($file['type'], $allowed_types)) {
+if (!in_array($mime_type, $allowed_types) && !in_array($file['type'], $allowed_types)) {
     echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPG, PNG, and GIF are allowed']);
     exit;
 }
@@ -59,7 +95,24 @@ if (!is_dir($upload_dir)) {
 }
 
 // Generate unique filename
-$file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+$file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+if (empty($file_extension)) {
+    // Determine extension from mime type
+    switch($mime_type) {
+        case 'image/jpeg':
+            $file_extension = 'jpg';
+            break;
+        case 'image/png':
+            $file_extension = 'png';
+            break;
+        case 'image/gif':
+            $file_extension = 'gif';
+            break;
+        default:
+            $file_extension = 'jpg';
+    }
+}
+
 $filename = $visitor_id . '_' . time() . '.' . $file_extension;
 $file_path = $upload_dir . $filename;
 
@@ -83,12 +136,17 @@ try {
     $stmt = $db->prepare("UPDATE visitors SET photo_path = ? WHERE visitor_id = ?");
     $stmt->execute([$file_path, $visitor_id]);
     
-    // Log the photo upload in visitor_photos table
-    $stmt = $db->prepare("INSERT INTO visitor_photos (visitor_id, photo_path, file_size, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$visitor_id, $file_path, $file['size'], $file['type'], $session['id']]);
+    // Log the photo upload in visitor_photos table if it exists
+    try {
+        $stmt = $db->prepare("INSERT INTO visitor_photos (visitor_id, photo_path, file_size, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$visitor_id, $file_path, $file['size'], $mime_type, $session['operator_id']]);
+    } catch (Exception $e) {
+        // Table might not exist, continue anyway
+        error_log("Visitor photos table error: " . $e->getMessage());
+    }
     
     // Log activity
-    logActivity($db, $session['id'], 'photo_upload', "Uploaded photo for visitor: $visitor_id", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+    logActivity($db, $session['operator_id'], 'photo_upload', "Uploaded photo for visitor: $visitor_id", $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
     
     echo json_encode([
         'success' => true, 
